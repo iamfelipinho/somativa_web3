@@ -1,0 +1,19 @@
+{
+    "HOME": {
+        "TITLE": "Construa uma moto do seu jeito!",
+        "ORDER": "Vamos para a oficina!"
+    },
+    "FOOTER": {
+        "SUPPORT": "Atendimento online 24hrs!"
+    },
+    "BUILD":{
+        "TITLE": "Personalize sua moto!",
+        "ADD_CART": "Adicionar no Carrinho"
+    },
+    "CART":{
+        "TITLE": "Carrinho"
+    },
+    "NOTFOUND":{
+        "TITLE": "Pagina não encontrada"
+    }
+}

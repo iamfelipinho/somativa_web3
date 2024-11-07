@@ -1,0 +1,19 @@
+{
+    "HOME": {
+        "TITLE": "Build now your motorcycle!",
+        "ORDER": "let's go to the workshop!"
+    },
+    "FOOTER": {
+        "SUPPORT": "Online support 24hrs!"
+    },
+    "BUILD":{
+        "TITLE": "Customize your motorcycle!",
+        "ADD_CART": "Add in Cart"
+    },
+    "CART":{
+        "TITLE": "Cart"
+    },
+    "NOTFOUND":{
+        "TITLE": "Page not found"
+    }
+}

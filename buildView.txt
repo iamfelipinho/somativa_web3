@@ -1,0 +1,376 @@
+buildView:
+<script setup lang="ts">
+import { PartsResponse, type PartsResponseType, Part } from '@/models/Parts';
+import { getParts } from '@/services/part.service';
+import { type Ref, ref, reactive } from 'vue';
+import PartSelector from '@/components/PartSelector.vue';
+import { ItemCart } from '@/models/Cart';
+import { useCart } from '@/stores/cart';
+
+const cart = useCart();
+
+const availableParts: Ref<PartsResponse> = ref(new PartsResponse());
+const itemCart = new ItemCart();  
+const selectedParts = reactive<ItemCart>(itemCart);
+
+getParts()
+    .then(parts => {
+        availableParts.value = parts;
+        const { frente, arms, centro, rodaF } = parts;
+
+        selectedParts.guidao = frente[0];
+        selectedParts.rodaTraseira = arms[0];
+        selectedParts.motor = centro[0];
+        selectedParts.rodaFrente = rodaF[0];
+    })
+    .catch(error => console.error(error));
+
+// Função para adicionar ao carrinho
+const addCart = () => {
+    console.log("Adicionado no carrinho os seguintes itens:");
+    console.log("Parts: ", selectedParts); 
+
+    selectedParts.updateCost();
+    cart.addMoto(selectedParts);
+};
+</script>
+
+<template>
+    <div class="container">
+        <h1 class="text-center mb-2">{{ $t('BUILD.TITLE') }}</h1> 
+
+        
+
+        <!-- Estrutura em grade para seleção de partes -->
+        <div class="grid">
+            <!-- Seção da cabeça (topo) -->
+            <PartSelector
+                :parts="availableParts.frente"
+                position="top"
+                v-model="selectedParts.guidao"
+                class="grid-item"
+            />
+            <!-- Seção dos braços e motor (meio) -->
+            <!-- <PartSelector
+                :parts="availableParts.arms"
+                position="left"
+                v-model="selectedParts.leftArm"
+                class="grid-item"
+            /> -->
+            <PartSelector
+                :parts="availableParts.centro"
+                position="center"
+                v-model="selectedParts.motor"
+                class="grid-item"
+            />
+            <PartSelector
+                :parts="availableParts.rodaT"
+                position="right"
+                v-model="selectedParts.rodaTraseira"
+                class="grid-item"
+            />
+            <!-- Seção da rodaFrente (inferior) -->
+            <PartSelector
+                :parts="availableParts.rodaF"
+                position="bottom"
+                v-model="selectedParts.rodaFrente"
+                class="grid-item"
+            />
+        </div>
+
+        <!-- Botão para adicionar ao carrinho -->
+        <div class="flex flex-row align-items-center justify-content-center">
+            <button @click="addCart" id="add-cart" class="mt-4 app-dark-button">
+                {{ $t('BUILD.ADD_CART') }}
+            </button>
+        </div>       
+    </div>
+</template>
+
+<style scoped lang="scss">
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+
+#add-cart {
+    padding: 0.5rem 1rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-areas: 
+        "top top top"
+        "left center right"
+        "bottom bottom bottom";
+    gap: 1rem;
+    align-items: center;
+    justify-items: center;
+}
+
+.grid-item {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ff7236;
+    position: relative;
+}
+
+.grid-item[position="top"] { grid-area: top; }
+.grid-item[position="left"] { grid-area: left; }
+.grid-item[position="center"] { grid-area: center; }
+.grid-item[position="right"] { grid-area: right; }
+.grid-item[position="bottom"] { grid-area: bottom; }
+
+.grid-item:before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 60%;
+    height: 60%;
+    background: rgba(0, 0, 0, 0.1);
+    transform: translate(-50%, -50%);
+    z-index: -1;
+}
+</style>
+
+
+
+---------------------------------------------
+
+cart.ts:
+
+import { Part } from "./Parts";
+
+export const calculateTotalCost = (itemCart: ItemCart): number => {    
+    return itemCart.rodaFrente.cost + 
+           itemCart.guidao.cost +
+           itemCart.rodaTraseira.cost +
+           itemCart.motor.cost;
+}
+
+export class ItemCart {
+    guidao: Part = new Part();
+    leftArm: Part = new Part();
+    rodaTraseira: Part = new Part();
+    rodaFrente: Part = new Part();
+    motor: Part = new Part();
+    cost: number = 0.0;
+
+    constructor(){
+        this.cost = calculateTotalCost(this);
+    }
+    updateCost(){
+        this.cost = calculateTotalCost(this);
+    }
+}
+
+export class Cart {
+    robots: Array<ItemCart> = [];
+    cost: number = 0.0;
+}
+
+
+
+----------------------------------------------
+
+parts.ts:
+
+
+export enum PartTypes {
+    "frente", "centro", "rodaT", "rodaF"
+}
+
+export type PartType = {
+    id: number;
+    description: string|null;
+}
+
+export class Part {
+    id: number = 0;
+    description: string = "";
+    title: string = "";
+    src: string = "";
+    type: PartTypes = PartTypes.rodaT;
+    cost: number = 0.0;
+}
+
+export class PartsResponse {
+    frente: Array<Part> = [];
+    rodaT: Array<Part> = [];
+    rodaF: Array<Part> = [];
+    centro: Array<Part> = [];    
+}
+
+
+export type PartsResponseType = {
+    frente: Array<Part>;
+    rodaT: Array<Part>;
+    rodaF: Array<Part>;
+    centro: Array<Part>;
+}
+
+
+
+----------------------------------------------
+
+partSelector.vue
+
+<script setup lang="ts">
+ import { Part } from '@/models/Parts';
+ import { ref, computed } from "vue";
+ import { BASE_URL } from '@/services/services.config';
+    
+ type PropType = {
+    parts: Array<Part>;
+    position: "left"|"right"|"top"|"bottom"|"center"
+ }
+ 
+ const model = defineModel<Part|null>();
+ const props = defineProps<PropType>();
+ const selectedIndex = ref(0);
+
+ const changePart = (isNext: boolean)=>{
+   
+    const newIndex = isNext? selectedIndex.value + 1 
+                                : selectedIndex.value - 1;
+
+    if(newIndex < 0){
+        selectedIndex.value = (props.parts.length - 1);        
+    }
+    else if(newIndex > (props.parts.length - 1)){
+        selectedIndex.value = 0;        
+    } else {
+        selectedIndex.value = newIndex;
+    }
+
+    model.value = props.parts[selectedIndex.value];
+ } 
+
+</script>
+
+<template>
+    <div :class="`part ${props.position}`">
+        <img :src="BASE_URL + props.parts[selectedIndex]?.src" alt="robot part">        
+        <button  @click="changePart(false)" class="prev-selector"></button>
+        <button  @click="changePart(true)" class="next-selector" ></button>
+    </div>
+</template>
+
+<style scoped lang="scss">
+$part-width: 165px;
+$part-height: 165px;
+
+.part{
+    position: relative;
+    width: $part-width;
+    height: $part-height;
+    border: 3px solid var(--app-part-border);
+
+    img{
+        width: calc($part-width - 1px);
+        height: calc($part-height - 1px);
+    }
+
+    button{
+        position: absolute;
+        z-index: 1;
+        top: -3px;
+        width: 25px;
+        height: 171px;        
+    }
+    
+    .next-selector{
+        right: -28px;        
+    }
+
+    .prev-selector{
+        left: -28px;
+    }
+}
+
+.top{
+    border-bottom: none;
+}
+.left{
+    border-right: none;
+    img{
+        transform: rotate(-90deg);
+    }
+
+    .next-selector{
+        top: auto;
+        bottom: -28px;
+        left: -3px;
+        width: 144px;
+        height: 25px;
+    }
+    .prev-selector{
+        top: -28px;      
+        left: -3px;
+        width: 144px;  
+        height: 25px;
+    }
+}
+.right{
+    border-left: none;
+    img{
+        transform: rotate(90deg);
+    }
+    .next-selector{
+        top: auto;
+        bottom: -28px;
+        left: 24px;
+        width: 144px;
+        height: 25px;
+    }
+    .prev-selector{
+        top: -28px;      
+        left: 24px;
+        width: 144px;  
+        height: 25px;
+    }
+}
+.bottom{
+    border-top: none;
+}
+.center{
+    border: none;
+    .next-selector,
+    .prev-selector{
+        opacity: 0.8;
+    }
+}
+
+.left .prev-selector::after,
+.right .prev-selector::after{
+    content: "\25B2";
+}
+
+.left .next-selector::after,
+.right .next-selector::after{
+    content: "\25BC";
+}
+
+.top .prev-selector::after,
+.bottom .prev-selector::after,
+.center .prev-selector::after{
+    content: "\25C4";
+}
+
+
+.top .next-selector::after,
+.bottom .next-selector::after,
+.center .next-selector::after{
+    content: "\25BA";
+}
+
+
+
+</style>
+
+
+---------------------------------------------------
